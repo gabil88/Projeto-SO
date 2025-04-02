@@ -59,7 +59,7 @@ int add_document(Document *doc) {
 }
 
 
-int remove_document(char *title) {
+int remove_document(int key) {
     char filepath[] = pathToDoc;
     int fd = open(filepath, O_RDWR);
     if (fd < 0) {
@@ -73,8 +73,8 @@ int remove_document(char *title) {
     
     lseek(fd, 0, SEEK_SET);
     
-    while ((read_result = read(fd, &temp, sizeof(Document))) > 0) {
-        if (strcmp(temp.title, title) == 0) {
+    while (((read_result = read(fd, &temp, sizeof(Document))) > 0) || !found) {
+        if (temp.key == key && temp.flag_deleted == 0) {
             temp.flag_deleted = 1;
             
             memset(temp.title, 0, sizeof(temp.title));
@@ -83,7 +83,6 @@ int remove_document(char *title) {
             write(fd, &temp, sizeof(Document));
             
             found = 1;
-            break;
         }
     }
     

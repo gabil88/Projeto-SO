@@ -7,3 +7,5 @@ authors têm no máximo 200 bytes cada, o campo path tem no máximo 64 bytes e o
 
 // ao indexar tenho de retornar uma key!!!!!! 
 // adicionar a uma struct
+
+//posso usar rename?

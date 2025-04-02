@@ -5,8 +5,10 @@ typedef struct {
     char title[100];
     char author[100];
     int year;
+    int key;
     char path[100];
-    int flag_deleted;
+    short int flag_deleted;
+
 } Document;
 
 #endif
