@@ -136,6 +136,7 @@ Document* consult_document(int key){
 }
 
 
+/*
 int DebugMemoriaPersistente() {
     // Create a test document
     Document test_doc;
@@ -217,3 +218,4 @@ int DebugMemoriaPersistente() {
     
     return 0;
 }
+*/
