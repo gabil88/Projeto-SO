@@ -5,5 +5,4 @@ authors têm no máximo 200 bytes cada, o campo path tem no máximo 64 bytes e o
 
 garbage collector
 
-//posso usar rename e unlink?
-//perguntar se vai ser necessario fazer varios pedidos simultaneamente!
+acess! para verificar erros

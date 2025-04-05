@@ -15,7 +15,6 @@
  *         - 1 if the input is valid.
  *         - 0 if the input is invalid.
  */
-
 int verifyInput(int argc, char *argv[]);
 
 #endif

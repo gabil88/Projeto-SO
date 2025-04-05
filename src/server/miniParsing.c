@@ -5,10 +5,10 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include "document_manager.h"
+#include "miniParsing.h"
 
 int parsing(char *argv[], Document *doc){
     if(argv[1] == "-a"){
-        Document *doc = (Document*) malloc(sizeof(Document));
         strcpy(doc->title, argv[1]);
         strcpy(doc->author, argv[2]);
         doc->year = atoi(argv[4]);
@@ -17,15 +17,13 @@ int parsing(char *argv[], Document *doc){
         return 1;
     }
     if(argv[1] == "-c"){
-        Document *doc = (Document*) malloc(sizeof(Document));
         doc->key = atoi(argv[2]);
         doc->flag_deleted = 0;
         return 2;
     }
     if(argv[1] == "-d"){
-        Document *doc = (Document*) malloc(sizeof(Document));
         doc->key = atoi(argv[2]);
-        doc->flag_deleted = 1;
+        doc->flag_deleted = 0;
         return 3;
     }
     else return -1;
