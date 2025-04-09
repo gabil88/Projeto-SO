@@ -135,6 +135,19 @@ Document* consult_document(int key){
     return NULL;  // Document not found
 }
 
+Document* initialize_document(Document *doc, int count){
+    doc = (Document*) malloc(sizeof(Document));
+    if (doc == NULL) {
+        perror("Error allocating memory for Document");
+        return NULL;
+    }
+    doc->key = count;
+    doc->flag_deleted = 0;
+    memset(doc->title, 0, sizeof(doc->title));
+    memset(doc->author, 0, sizeof(doc->author));
+    memset(doc->path, 0, sizeof(doc->path));
+    return doc;
+}
 
 /*
 int DebugMemoriaPersistente() {

@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
     // Create a unique client pipe name using PID
     char client_pipe_name[64];
-    sprintf(client_pipe_name, "/tmp/client_pipe_%d",getpid());
+    sprintf(client_pipe_name, "/tmp/client_fifo_%d",getpid());
     
     // Create client-specific FIFO for receiving responses
     if (mkfifo(client_pipe_name, 0666) == -1) {
@@ -63,9 +63,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Write the Request struct to the server FIFO
-    if (write(server_fifo, &req, sizeof(req)) < 0) {
+    if (write(server_fifo, &req, sizeof(req)) != sizeof(req)) {
         perror("Error writing to server FIFO");
-        close(SERVER_PATH);
+        close(server_fifo);
         unlink(client_pipe_name);
         return -1;
     }
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     /* Read and display server response
     *
     * Read bloqueia até algo ser escrito, talvez precise de um metodo caso o servidor abandone
-    * o cliente chilladamente 
+    * o cliente chilladamente, time out! 
     */
     char response_buffer[4096] = {0};
     ssize_t bytes_read = read(client_fifo, response_buffer, sizeof(response_buffer) - 1);

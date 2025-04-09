@@ -1,5 +1,7 @@
-#ifndef MINI_PARSING
-#define MINI_PARSING
+#ifndef PARSING
+#define PARSING
+
+#include "document_manager.h"
 
 /**
  * @brief Parses the command-line arguments and populates the Document structure.
@@ -13,5 +15,6 @@
  *      -1 if the command is invalid or parsing fails.
  */
 int parsing(char *argv[], Document *doc);
+
 
 #endif

@@ -4,14 +4,12 @@
 #define QUEUE_SIZE 10
 
 typedef struct {
-    char messages[QUEUE_SIZE][256];
-    int front;
-    int rear;
-    int count;
+    void* data[QUEUE_SIZE];
+    int front, rear, count;
 } MessageQueue;
 
-void enqueue(MessageQueue *q, const char *message);
+void enqueue(MessageQueue* queue, void* data);
 
-
+void* dequeue(MessageQueue *q);
 
 #endif

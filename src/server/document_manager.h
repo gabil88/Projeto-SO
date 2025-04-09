@@ -35,7 +35,22 @@ typedef struct {
     int key;
     char path[100];
     short int flag_deleted;
-
 } Document;
+
+/**
+ * @brief Initializes a Document structure.
+ *
+ * This function allocates memory for a Document structure and initializes
+ * its fields with default values.
+ *
+ * @param doc A pointer to the Document structure to be initialized.
+ * @param count The unique key to assign to the document.
+ * @return A pointer to the initialized Document structure.
+ */
+Document* initialize_document(Document *doc, int count);
+
+int add_document(Document *doc);
+int remove_document(int key);
+Document* consult_document(int key);
 
 #endif

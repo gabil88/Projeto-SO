@@ -1,13 +1,30 @@
 #include <string.h>
-#include <pthread.h>
+#include <stdio.h>
 #include "dserver_utils.h"
 
-void enqueue(MessageQueue *q, const char *message) {
-    if (q->count < QUEUE_SIZE) {
-        strncpy(q->messages[q->rear], message, 256);
-        q->rear = (q->rear + 1) % QUEUE_SIZE;
-        q->count++;
-    } else {
-        printf("Queue is full. Message dropped: %s\n", message);
+
+
+// Em dserver_utils.c
+void enqueue(MessageQueue* queue, void* data) {
+    if (queue->count >= QUEUE_SIZE) {
+        printf("Queue is full\n");
+        return;
     }
+    
+    queue->data[queue->rear] = data;
+    queue->rear = (queue->rear + 1) % QUEUE_SIZE;
+    queue->count++;
+}
+
+void* dequeue(MessageQueue* queue) {
+    if (queue->count <= 0) {
+        printf("Queue is empty\n");
+        return NULL;
+    }
+    
+    void* data = queue->data[queue->front];
+    queue->front = (queue->front + 1) % QUEUE_SIZE;
+    queue->count--;
+    
+    return data;
 }
