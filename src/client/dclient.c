@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         strncat(request_buffer, argv[i], sizeof(request_buffer) - strlen(request_buffer) - 1);
         if (i < argc - 1) {
-            strncat(request_buffer, " ", sizeof(request_buffer) - strlen(request_buffer) - 1);
+            strncat(request_buffer, "/", sizeof(request_buffer) - strlen(request_buffer) - 1);
         }
     }
 

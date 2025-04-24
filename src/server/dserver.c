@@ -12,6 +12,7 @@
 #include "../../include/server/dserver_utils.h"
 #include "../../include/server/document_manager.h"
 #include "../../include/server/parsing.h"
+#include "../../include/server/cache.h"
 
 #define FIFO_PATH "/tmp/server_fifo"
 #define MAX_ITEMS_IN_MEMORY 10
@@ -52,6 +53,8 @@ int main() {
         perror("Error opening FIFO");
         return -1;
     }
+
+    Cache* cache = cache_init(); // Inicializa a cache 
 
     printf("Server started. Waiting for requests...\n");
     
@@ -99,17 +102,16 @@ int main() {
 
                 switch(type){
                     case 1: // Add document
-                        status = add_document(doc);
-                        if (status == 0) {
+                        status = cache_add(cache, doc);
+                        if (status == 0){
                             send_message(pipe_name, "Document added successfully.");
-                        } else if (status == -2) {
-                            send_message(pipe_name, "Document with the same title already exists.");
+                        } else if (status == 2) {
+                            send_message(pipe_name, "Document already exists in cache.");
                         } else {
-                            send_message(pipe_name, "Error adding document.");
+                            send_message(pipe_name, "Unexpected Error adding document.");
                         }
                         break;
-
-                    case 2: // Consult document
+                    case 2:
                         Document* found_doc = consult_document(doc->key);
                         if (found_doc != NULL) {
                             char message[256];
@@ -134,6 +136,7 @@ int main() {
                         send_message(pipe_name, "Invalid request.");
                 }
                 exit(0);
+
             }
         }
     }

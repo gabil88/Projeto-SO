@@ -8,84 +8,60 @@
 #include "../../include/server/document_manager.h"
 #include "../../include/server/parsing.h"
 
-char** separateString(char* request) {
-    // Alocar memória para o array de ponteiros (até 10 tokens + NULL)
-    char** tokens = malloc(11 * sizeof(char*));
-    if (tokens == NULL) {
-        return NULL;
-    }
-    
-    char* token;
-    int i = 0;
+int parsing(char* request, Document* doc) {
+    // Save the original key
+    int original_key = doc->key;
 
-    // Primeira chamada ao strtok - isso modifica a string!
-    token = strtok(request, " ");
-    
-    while(token != NULL && i < 10) {
-        tokens[i] = token;  // Salvar o ponteiro para o token
-        token = strtok(NULL, " ");  // Obter próximo token
-        i++;
-    }
-    tokens[i] = NULL;  // Terminar com NULL
-    
-    return tokens;
-}
+    // Parse the command type
+    char* token = strtok(request, "/");
+    if (!token) return -1;
 
-int parsing(char* request, Document *doc) {
-    if(request == NULL || doc == NULL) {
-        return -1;
+    int type = -1;
+    if (strcmp(token, "-a") == 0) {
+        type = 1; // Add document
+    } else if (strcmp(token, "-c") == 0) {
+        type = 2; // Consult document
+    } else if (strcmp(token, "-d") == 0) {
+        type = 3; // Delete document
+    } else {
+        return -1; // Invalid command
     }
 
-    // Criar uma cópia da string, já que strtok a modifica
-    char* request_copy = strdup(request);
-    if (request_copy == NULL) {
-        return -1;
-    }
-    
-    // Separar a string em tokens
-    char** argv = separateString(request_copy);
-    if (argv == NULL) {
-        free(request_copy);
-        return -1;
-    }
+    // Parse the next parameter depending on command type
+    if (type == 1) { // Add document - need title, author, year, path
+        // Parse title
+        token = strtok(NULL, "/");
+        if (!token) return -1;
+        strncpy(doc->title, token, sizeof(doc->title) - 1);
+        doc->title[sizeof(doc->title) - 1] = '\0';
 
-    int result = -1;
-    
-    // Verificar se temos pelo menos um argumento
-    if (argv[0] == NULL) {
-        free(argv);
-        free(request_copy);
-        return -1;
-    }
+        // Parse author
+        token = strtok(NULL, "/");
+        if (!token) return -1;
+        strncpy(doc->author, token, sizeof(doc->author) - 1);
+        doc->author[sizeof(doc->author) - 1] = '\0';
 
-    // CORREÇÃO: argv[0] contém o primeiro token, não argv[1]
-    if (strcmp(argv[0], "-a") == 0) {
-        // Verificar se temos argumentos suficientes
-        if (argv[1] != NULL && argv[2] != NULL && argv[3] != NULL) {
-            strcpy(doc->title, argv[1]);
-            strcpy(doc->author, argv[2]);
-            doc->year = atoi(argv[3]);  // Corrigido de argv[4] para argv[3]
-            result = 1;
+        // Parse year
+        token = strtok(NULL, "/");
+        if (!token) return -1;
+        doc->year = atoi(token);
+
+        // Parse path if provided
+        token = strtok(NULL, "/");
+        if (token) {
+            strncpy(doc->path, token, sizeof(doc->path) - 1);
+            doc->path[sizeof(doc->path) - 1] = '\0';
         }
-    }
-    else if (strcmp(argv[0], "-c") == 0) {
-        // Verificar se temos o argumento da chave
-        if (argv[1] != NULL) {
-            doc->key = atoi(argv[1]);  // Corrigido de argv[2] para argv[1]
-            result = 2;
-        }
-    }
-    else if (strcmp(argv[0], "-d") == 0) {  // Corrigido para usar == em vez de apenas )
-        // Verificar se temos o argumento da chave
-        if (argv[1] != NULL) {
-            doc->key = atoi(argv[1]);  // Corrigido de argv[2] para argv[1]
-            result = 3;
-        }
+    } else if (type == 2 || type == 3) { // Consult or Delete - need key
+        token = strtok(NULL, "/");
+        if (!token) return -1;
+        doc->key = atoi(token);
     }
 
-    // Liberar a memória alocad
-    free(argv);
-    free(request_copy);
-    
-    return result;
+    // Restore the original key if we didn't explicitly set it
+    if (type == 1) {
+        doc->key = original_key;
+    }
+
+    return type;
 }

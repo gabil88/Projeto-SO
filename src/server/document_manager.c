@@ -186,6 +186,57 @@ Document* initialize_document(Document *doc, int count){
     return doc;
 }
 
+int update_document(Document *doc) {
+    int fd = open(pathToDoc, O_RDWR);
+    if (fd < 0) {
+        perror("Error opening file");
+        return -1;
+    }
+    Document temp;
+    int read_result;
+    int found = 0;
+    lseek(fd, 0, SEEK_SET);
+    while ((read_result = read(fd, &temp, sizeof(Document))) > 0 && !found) {
+        if (temp.key == doc->key && temp.flag_deleted == 0) {
+            temp.year = doc->year;
+            strncpy(temp.title, doc->title, sizeof(temp.title) - 1);
+            temp.title[sizeof(temp.title) - 1] = '\0';  // Ensure null-termination
+            strncpy(temp.author, doc->author, sizeof(temp.author) - 1);
+            temp.author[sizeof(temp.author) - 1] = '\0';  // Ensure null-termination
+            strncpy(temp.path, doc->path, sizeof(temp.path) - 1);
+            temp.path[sizeof(temp.path) - 1] = '\0';  // Ensure null-termination
+
+            lseek(fd, -sizeof(Document), SEEK_CUR);
+            write(fd, &temp, sizeof(Document));
+            
+            found = 1;
+        }
+    }
+    close(fd);
+    if (!found) {
+        add_document(doc);  // If not found, add the document
+    }
+    return 0;  // correu tudo bem
+}
+
+Document* consult_document_by_title(const char* title) {
+    int fd = open(pathToDoc, O_RDONLY);
+    if (fd < 0) return NULL;
+
+    Document temp;
+    while (read(fd, &temp, sizeof(Document)) > 0) {
+        if (strcmp(temp.title, title) == 0 && temp.flag_deleted == 0) {
+            Document* doc = malloc(sizeof(Document));
+            memcpy(doc, &temp, sizeof(Document));
+            close(fd);
+            return doc;
+        }
+    }
+    close(fd);
+    return NULL;
+}
+
+
 int generate_unique_key() {
     // Abre o arquivo que armazena a última chave usada
     int key_fd = open("../../storage/next_key.dat", O_RDWR | O_CREAT, 0644);

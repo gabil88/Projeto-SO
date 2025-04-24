@@ -1,6 +1,6 @@
 # Makefile para Projeto-SO
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -o2
 
 # Diretórios
 SRC_DIR = src

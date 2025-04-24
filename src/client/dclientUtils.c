@@ -5,19 +5,40 @@
 #include <fcntl.h>
 
 int verifyInput(int argc, char *argv[]) {
-    if (strcmp(argv[1], "-a") == 0 && argc == 6) {
-        return 1;
+    // Must have at least 2 arguments (program name + command)
+    if (argc < 2) {
+        printf("Usage: \n");
+        printf("  Add document:    %s -a <title> <author> <year> [path]\n", argv[0]);
+        printf("  Consult doc:     %s -c <key>\n", argv[0]);
+        printf("  Remove doc:      %s -d <key>\n", argv[0]);
+        return 0;
     }
-    else if (strcmp(argv[1], "-l") == 0 && argc == 4) {
-        return 1;
+    
+    // Check command types
+    if (strcmp(argv[1], "-a") == 0) {
+        // Add document: needs 6 args (command, -a, title, author, year, path)
+        if (argc == 6) {
+            return 1;
+        } else {
+            printf("Usage for add: %s -a <title> <author> <year> [path]\n", argv[0]);
+            return 0;
+        }
     }
-    else if ((strcmp(argv[1], "-r") == 0 || 
-              strcmp(argv[1], "-c") == 0 || 
-              strcmp(argv[1], "-d") == 0) && 
-             argc == 3) {
-        return 1;
+    else if (strcmp(argv[1], "-c") == 0 || 
+             strcmp(argv[1], "-d") == 0){
+        // Consult, Delete needs 3 args (command, -[c|d], key)
+        if (argc == 3) {
+            return 1;
+        } else {
+            char* cmd_type = (argv[1][1] == 'c') ? "consult" : 
+                             (argv[1][1] == 'd') ? "delete" : "replace";
+            printf("Usage for %s: %s %s <key>\n", cmd_type, argv[0], argv[1]);
+            return 0;
+        }
     }
     else {
+        printf("Unknown command: %s\n", argv[1]);
+        printf("Valid commands: -a (add), -l (list), -c (consult), -d (delete), -r (replace)\n");
         return 0;
     }
 }
