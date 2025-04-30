@@ -7,13 +7,14 @@ authors têm no máximo 200 bytes cada, o campo path tem no máximo 64 bytes e o
 BUGS ATUAIS:
 
 TO-DO:
-- parte do codigo em memoria
-- tratar de fechar bem o server e dar clear a tudo :/
+- parte do codigo em memoria (double check , talvez melhor o LRU)
 - queries
-- tweaking no sistema de chaves
-- garbage collector no disco
+- comentar
+- melhorar feedbacks dos prints
+- new request "-x" ou algo para trazer para a cache apos consulta.
+?? garbage collector no disco 
+?? encapsular os -w  e -x em uma request ou criar um novo fifo para estas mini-requests dos filhos
 
 PERGUNTAR AO VFF:
 
-- sobre escrever string para o server ou o argv diretamente
  

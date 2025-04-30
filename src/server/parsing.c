@@ -17,12 +17,16 @@ int parsing(char* request, Document* doc) {
     if (!token) return -1;
 
     int type = -1;
-    if (strcmp(token, "-a") == 0) {
+    if (strcmp(token, "-f") == 0) {
+        type = 0; // Flush server
+    } else if (strcmp(token, "-a") == 0) {
         type = 1; // Add document
     } else if (strcmp(token, "-c") == 0) {
         type = 2; // Consult document
     } else if (strcmp(token, "-d") == 0) {
         type = 3; // Delete document
+    } else if (strcmp(token, "-w") == 0) {
+        type = 6; // Wait for lost child
     } else {
         return -1; // Invalid command
     }

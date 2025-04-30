@@ -1,6 +1,7 @@
 # Makefile para Projeto-SO
 CC = gcc
-CFLAGS = -Wall -Wextra -g -o2
+CFLAGS = -Wall -Wextra -g -O2 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+LDFLAGS = -lglib-2.0
 
 # Diretórios
 SRC_DIR = src

@@ -34,7 +34,7 @@ void cache_clean(Cache* cache) {
     free(cache);
 }
 
-int cache_add(Cache* cache, Document *doc) {
+int cache_add(Cache* cache, Document *doc, int skip_check) {
     if (!cache || !doc) return -1;  
     
     // Verifica se o documento já existe no cache
@@ -42,13 +42,16 @@ int cache_add(Cache* cache, Document *doc) {
         printf("Cache item %d: %s\n", i, cache->items[i].doc ? cache->items[i].doc->title : "NULL");
         if (cache->items[i].doc != NULL && strcmp(cache->items[i].doc->title, doc->title) == 0) {
             printf("Document already exists in cache: %s\n", doc->title);
+            fflush(stdout);
             return 2;   // Documento já existe no cache
         }
     }
 
-    if(consult_document_by_title(doc->title) != NULL){
-        printf("Document already exists in storage: %s\n", doc->title);
-        return 2; // Documento já existe no armazenamento
+    if(!skip_check){
+        if(consult_document_by_title(doc->title) != NULL){
+            printf("Document already exists in storage: %s\n", doc->title);
+            return 2; // Documento já existe no armazenamento
+        }
     }
 
     if (cache->count < CACHE_SIZE) {
@@ -112,7 +115,8 @@ int cache_remove(Cache* cache, int key){
             return 0;  // removido com sucesso
         }
     }
-    return -1;  // Não existe
+
+    return remove_document(key); // Não existe em lado nenhum se sair -1
 }
 
 Document* cache_get(Cache* cache, int key){
@@ -126,9 +130,7 @@ Document* cache_get(Cache* cache, int key){
             return cache->items[i].doc;
         }
     }
-    // Se não encontrar o documento na cache, é um miss
-    cache->misses++;
-    return NULL;
+    return consult_document(key);// Não existe no cache nem no armazenamento
 }
 
 int cache_flush_all_dirty(Cache* cache) {

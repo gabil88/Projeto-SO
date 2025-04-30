@@ -36,6 +36,14 @@ int verifyInput(int argc, char *argv[]) {
             return 0;
         }
     }
+    else if(strcmp(argv[1], "-f") == 0){
+        if (argc == 2) {
+            return 1;
+        } else {
+            printf("Usage for flush: %s -f\n", argv[0]);
+            return 0;
+        }
+    }
     else {
         printf("Unknown command: %s\n", argv[1]);
         printf("Valid commands: -a (add), -l (list), -c (consult), -d (delete), -r (replace)\n");

@@ -49,7 +49,7 @@ void cache_clean(Cache* cache);
  * @param doc A pointer to the document to be added.
  * @return 0 on success, -1 on failure.
  */
-int cache_add(Cache* cache, Document *doc);
+int cache_add(Cache* cache, Document *doc, int skip_check);
 
 /*
 * @brief Removes a document from the cache.

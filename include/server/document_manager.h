@@ -1,6 +1,8 @@
 #ifndef DOCUMENT_MANAGER_H_
 #define DOCUMENT_MANAGER_H_
 
+#include <glib.h>
+
 /**
  * @struct Document
  * @brief Represents a document with metadata and file path information.
@@ -47,14 +49,23 @@ typedef struct {
  * @param count The unique key to assign to the document.
  * @return A pointer to the initialized Document structure.
  */
-Document* initialize_document(Document *doc, int count);
+Document* initialize_document(Document *doc);
 
 int add_document(Document *doc);
 int remove_document(int key);
 Document* consult_document(int key);
 int update_document(Document *doc);
 Document* consult_document_by_title(const char* title);
-int generate_unique_key();
 
+/**
+ * @brief Loads the list of deleted document keys into the provided GArray.
+ *
+ * This function populates the given GArray with the keys of documents that have been marked as deleted.
+ * Also, it returns the highest non deleted key found in the file.
+ *
+ * @param deleted_keys A pointer to a GArray where the deleted keys will be stored.
+ * @return The highest non deleted key found in the file, or -1 if an error occurs.
+ */
+int load_deleted_keys(GArray *deleted_keys);
 
 #endif
