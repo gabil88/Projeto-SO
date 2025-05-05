@@ -100,7 +100,7 @@ int main() {
             int status = -1;
             pid_t pid; 
 
-            if (type == 0 || type == 1 || type == 3 || type == 6) {
+            if (type == 0 || type == 1 || type == 3 || type == 6 || type == 7) {
                 // Handle type 1 and 3 in the parent process
                 switch(type){
                     case 0:
@@ -161,7 +161,19 @@ int main() {
                             printf("Invalid PID.\n");
                         }
                         break;
-                 
+                    case 7: // Add to cache
+                        printf("Adding from disk to cache: %s\n", req.request);
+                        int key = atoi(req.request + 4); // pegando na string "-ac/323" -> atoi("323") -> 323 
+                        doc = consult_document(key);
+                        printf("Document to add to cache: %s\n", doc->title);
+                        cache_add(cache, doc, 1); // adiciona saltando a verificação do storage
+                        print_cache_state(cache);
+                        if (status == 0) {
+                            printf("Document added to cache successfully.");
+                        } else {
+                            printf("Unexpected Error adding document to cache.");
+                        }
+                        break;
                 }
             } else {
                 pid_t child_pid = fork();
@@ -172,6 +184,7 @@ int main() {
                 }
                 if (child_pid == 0) {
                     // Child process
+                    printf("Child process created with PID: %d\n", getpid());
                     pid_t grandchild_pid = fork();
                     if (grandchild_pid < 0) {
                         perror("Error during grandchild fork");
@@ -179,17 +192,45 @@ int main() {
                         exit(1);
                     }
                     if (grandchild_pid == 0) {
+                        printf("Grandchild process created with PID: %d\n", getpid());
                         // Grandchild process
                         switch(type) {
                             case 2: {
                                 Document* found_doc = cache_get(cache, doc->key);
                                 if (found_doc != NULL) {
                                     char message[256];
-                                    snprintf(message, sizeof(message), "Document found: Key: %d, Title: %s", found_doc->key, found_doc->title);
+                                    snprintf(message, sizeof(message), "Document found in cache with Key: %d and Title: %s", found_doc->key, found_doc->title);
                                     send_message(pipe_name, message);
                                     free(found_doc);
                                 } else {
-                                    send_message(pipe_name, "Document not found.");
+                                    found_doc = consult_document(doc->key);
+                                    if (found_doc != NULL) {
+                                        char message[256];
+                                        snprintf(message, sizeof(message), "Document found in storage with Key: %d and Title: %s", found_doc->key, found_doc->title);
+                                        send_message(pipe_name, message);
+
+                                        char addCache[256];
+                                        snprintf(addCache, sizeof(addCache), "-ac/%d", found_doc->key);
+                                        Request addCache_req = {0};
+
+                                        snprintf(addCache_req.request, sizeof(addCache_req.request), "%s", addCache);   
+                                        snprintf(addCache_req.pipe, sizeof(addCache_req.pipe), "%s", pipe_name);
+
+                                        int addCache_fd = open(FIFO_PATH, O_WRONLY);
+                                        if (addCache_fd != -1) {
+                                            ssize_t bytes_written = write(addCache_fd, &addCache_req, sizeof(Request));
+                                            if (bytes_written == -1) {
+                                                perror("Error writing to addCache FIFO");
+                                            } else if (bytes_written != sizeof(Request)) {
+                                                printf("Partial write to FIFO\n");
+                                            }
+                                            close(addCache_fd);
+                                        } else {
+                                            perror("Error opening FIFO for addCache");
+                                        } 
+                                    } else {
+                                        send_message(pipe_name, "Document not found.");
+                                    }
                                 }
                                 break;
                             }
@@ -212,13 +253,18 @@ int main() {
                         snprintf(notify, sizeof(notify), "-w/%d", getpid());
 
                         Request notify_req = {0};
-                        strncpy(notify_req.request, notify, sizeof(notify_req.request) - 1);
-                        strncpy(notify_req.pipe, pipe_name, sizeof(notify_req.pipe) - 1);
+                        snprintf(notify_req.request, sizeof(notify_req.request), "%s", notify); 
+                        snprintf(notify_req.pipe, sizeof(notify_req.pipe), "%s", pipe_name);
 
                         // Open FIFO for writing only when sending notification
                         int notify_fd = open(FIFO_PATH, O_WRONLY);
                         if (notify_fd != -1) {
-                            write(notify_fd, &notify_req, sizeof(Request));
+                            ssize_t bytes_written = write(notify_fd, &notify_req, sizeof(Request));
+                            if (bytes_written == -1) {
+                                perror("Error writing to notification FIFO");
+                            } else if (bytes_written != sizeof(Request)) {
+                                printf("Partial write to FIFO\n");
+                            }
                             close(notify_fd);
                         } else {
                             perror("Error opening FIFO for notification");

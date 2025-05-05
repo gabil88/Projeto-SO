@@ -130,7 +130,7 @@ Document* cache_get(Cache* cache, int key){
             return cache->items[i].doc;
         }
     }
-    return consult_document(key);// Não existe no cache nem no armazenamento
+    return NULL;
 }
 
 int cache_flush_all_dirty(Cache* cache) {

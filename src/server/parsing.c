@@ -27,6 +27,8 @@ int parsing(char* request, Document* doc) {
         type = 3; // Delete document
     } else if (strcmp(token, "-w") == 0) {
         type = 6; // Wait for lost child
+    } else if (strcmp(token, "-ac") == 0) {
+        type = 7; // Exist in doc, add to cache
     } else {
         return -1; // Invalid command
     }
