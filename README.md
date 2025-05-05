@@ -5,6 +5,9 @@ authors têm no máximo 200 bytes cada, o campo path tem no máximo 64 bytes e o
 
 
 BUGS ATUAIS:
+-Pedir ao pai para atualizar o tempo de um ficheiro que foi consultado e já existia na cache
+-Unexpected Error adding document to cache.Received request: -w/352456 from pipe /tmp/client_fifo_352455
+
 
 TO-DO:
 - parte do codigo em memoria (double check , talvez melhor o LRU)

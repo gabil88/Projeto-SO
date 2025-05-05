@@ -42,6 +42,7 @@ int cache_add(Cache* cache, Document *doc, int skip_check) {
         printf("Cache item %d: %s\n", i, cache->items[i].doc ? cache->items[i].doc->title : "NULL");
         if (cache->items[i].doc != NULL && strcmp(cache->items[i].doc->title, doc->title) == 0) {
             printf("Document already exists in cache: %s\n", doc->title);
+            cache->items[i].last_access_time = time(NULL);
             fflush(stdout);
             return 2;   // Documento já existe no cache
         }
