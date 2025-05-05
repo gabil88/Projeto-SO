@@ -10,8 +10,6 @@
 
 #include "../../include/server/document_manager.h"
 
-#define pathToDoc "../../storage/documents.txt"
-
 
 /* 
 *   Função que adiciona um documento ao arquivo de documentos persistente
@@ -22,7 +20,7 @@
 
 int add_document(Document *doc) {
     // Ensure the storage directory exists
-    if (mkdir("../../storage", 0755) == -1 && errno != EEXIST) {
+    if (mkdir("storage", 0755) == -1 && errno != EEXIST) {
         perror("Error ensuring storage directory");
         return -1;
     }
@@ -168,7 +166,12 @@ Document* initialize_document(Document *doc){
 }
 
 int update_document(Document *doc) {
-    int fd = open(pathToDoc, O_RDWR);
+    // Ensure the storage directory exists
+    if (mkdir("storage", 0755) == -1 && errno != EEXIST) {
+        perror("Error ensuring storage directory");
+        return -1;
+    }
+    int fd = open(pathToDoc, O_RDWR | O_CREAT, 0644);
     if (fd < 0) {
         perror("Error opening file");
         return -1;

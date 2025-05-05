@@ -12,8 +12,13 @@ int parsing(char* request, Document* doc) {
     // Save the original key
     int original_key = doc->key;
 
+    // Make a copy of the request to avoid modifying the original string
+    char request_copy[1024];
+    strncpy(request_copy, request, sizeof(request_copy) - 1);
+    request_copy[sizeof(request_copy) - 1] = '\0';
+
     // Parse the command type
-    char* token = strtok(request, "/");
+    char* token = strtok(request_copy, "/");
     if (!token) return -1;
 
     int type = -1;
@@ -25,6 +30,10 @@ int parsing(char* request, Document* doc) {
         type = 2; // Consult document
     } else if (strcmp(token, "-d") == 0) {
         type = 3; // Delete document
+    } else if (strcmp(token, "-l") == 0) {
+        type = 4; // Querie -l
+    } else if (strcmp(token, "-s") == 0) {
+        type = 5; // Querie -s
     } else if (strcmp(token, "-w") == 0) {
         type = 6; // Wait for lost child
     } else if (strcmp(token, "-ac") == 0) {
@@ -58,12 +67,11 @@ int parsing(char* request, Document* doc) {
             strncpy(doc->path, token, sizeof(doc->path) - 1);
             doc->path[sizeof(doc->path) - 1] = '\0';
         }
-    } else if (type == 2 || type == 3) { // Consult or Delete - need key
+    } else if (type == 2 || type == 3 || type == 4) { // Consult or Delete - need key
         token = strtok(NULL, "/");
         if (!token) return -1;
         doc->key = atoi(token);
     }
-
     // Restore the original key if we didn't explicitly set it
     if (type == 1) {
         doc->key = original_key;

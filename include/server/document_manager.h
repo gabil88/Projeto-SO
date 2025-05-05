@@ -39,6 +39,9 @@ typedef struct {
     short int flag_deleted;
 } Document;
 
+
+#define pathToDoc "storage/documents.txt"
+
 /**
  * @brief Initializes a Document structure.
  *

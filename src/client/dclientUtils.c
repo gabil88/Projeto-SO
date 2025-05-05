@@ -24,6 +24,15 @@ int verifyInput(int argc, char *argv[]) {
             return 0;
         }
     }
+    else if (strcmp(argv[1], "-l") == 0) {
+        // List documents: needs 2 args (command, -l, "key", "keyword")
+        if (argc == 4) {
+            return 1;
+        } else {
+            printf("Usage for list: %s -l\n", argv[0]);
+            return 0;
+        }
+    }
     else if (strcmp(argv[1], "-c") == 0 || 
              strcmp(argv[1], "-d") == 0){
         // Consult, Delete needs 3 args (command, -[c|d], key)
