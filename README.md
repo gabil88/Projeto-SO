@@ -11,10 +11,19 @@ TO-DO:
 - queries
 - comentar
 - melhorar feedbacks dos prints
-- new request "-x" ou algo para trazer para a cache apos consulta.
+- log system para erros
+- scripts teste
 ?? garbage collector no disco 
 ?? encapsular os -w  e -x em uma request ou criar um novo fifo para estas mini-requests dos filhos
 
 PERGUNTAR AO VFF:
 
  
+QUERIES:
+
+Documentos em que o documento apresenta a keyword e "nr_processes" é quantos devemos criar
+dclient -s "keyword" "nr_processes"
+
+
+Numero de linhas em que o documento com a "key" apresenta a "keyword"
+dclient -l "key" "keyword"

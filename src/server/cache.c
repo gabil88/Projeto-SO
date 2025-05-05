@@ -54,51 +54,50 @@ int cache_add(Cache* cache, Document *doc, int skip_check) {
         }
     }
 
-    if (cache->count < CACHE_SIZE) {
-        // Procura o primeiro slot vazio e add ao doc
-        for (int i = 0; i < CACHE_SIZE; i++) {
-            if (cache->items[i].doc == NULL) {
-                cache->items[i].doc = doc;
-                cache->items[i].last_access_time = time(NULL);
-                cache->items[i].access_count = 1;
-                cache->items[i].is_dirty = 1;  // Mark as dirty (new item)
-                cache->count++;
-                return 0; 
-            }
+    // Always try to find an empty slot first
+    for (int i = 0; i < CACHE_SIZE; i++) {
+        if (cache->items[i].doc == NULL) {
+            cache->items[i].doc = doc;
+            cache->items[i].last_access_time = time(NULL);
+            cache->items[i].access_count = 1;
+            cache->items[i].is_dirty = 1;  // Mark as dirty (new item)
+            cache->count++;
+            return 0; 
         }
-        return -1; // Erro inesperado
-    } else {
-        int lru_index = 0;
-        time_t oldest_time = cache->items[0].last_access_time;
-
-        // procura o item usado ha mais tempo
-        for (int i = 1; i < CACHE_SIZE; i++) {
-            if (cache->items[i].last_access_time < oldest_time) {
-                oldest_time = cache->items[i].last_access_time;
-                lru_index = i;
-            }
-        }
-
-        // Se o item for dirty, precisamos salvá-lo em disco antes de removê-lo
-        if (cache->items[lru_index].is_dirty && cache->items[lru_index].doc != NULL) {
-            int state = update_document(cache->items[lru_index].doc);
-            if (state == -1) {
-                printf("Error updating document in cache\n");
-                return -1;  // Erro ao atualizar o documento
-            }
-            else printf("Document updated in cache\n");
-        }
-        
-        // Replace the LRU item
-        if (cache->items[lru_index].doc != NULL) {
-            free(cache->items[lru_index].doc);
-        }
-        cache->items[lru_index].doc = doc;
-        cache->items[lru_index].last_access_time = time(NULL);
-        cache->items[lru_index].access_count = 1;
-        cache->items[lru_index].is_dirty = 1;  // Novo item, marca como dirty
-        return 0;  // adicionado com sucesso
     }
+
+    // If no empty slot, replace the LRU item
+    int lru_index = 0;
+    time_t oldest_time = cache->items[0].last_access_time;
+
+    // procura o item usado ha mais tempo
+    for (int i = 1; i < CACHE_SIZE; i++) {
+        if (cache->items[i].last_access_time < oldest_time) {
+            oldest_time = cache->items[i].last_access_time;
+            lru_index = i;
+        }
+    }
+
+    // Se o item for dirty, precisamos salvá-lo em disco antes de removê-lo
+    if (cache->items[lru_index].is_dirty && cache->items[lru_index].doc != NULL) {
+        int state = update_document(cache->items[lru_index].doc);
+        if (state == -1) {
+            printf("Error updating document in cache\n");
+            return -1;  // Erro ao atualizar o documento
+        }
+        else printf("Document updated in cache\n");
+    }
+    
+    // Replace the LRU item
+    if (cache->items[lru_index].doc != NULL) {
+        free(cache->items[lru_index].doc);
+    }
+    cache->items[lru_index].doc = doc;
+    cache->items[lru_index].last_access_time = time(NULL);
+    cache->items[lru_index].access_count = 1;
+    cache->items[lru_index].is_dirty = 1;  // Novo item, marca como dirty
+    // cache->count does not change here, since we're replacing
+    return 0;  // adicionado com sucesso
 }
 
 int cache_remove(Cache* cache, int key){

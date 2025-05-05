@@ -13,6 +13,7 @@
 #include "../../include/server/document_manager.h"
 #include "../../include/server/parsing.h"
 #include "../../include/server/cache.h"
+#include "../../include/server/querie_handler.h"
 
 #define FIFO_PATH "/tmp/server_fifo"
 #define MAX_ITEMS_IN_MEMORY 10
@@ -96,7 +97,7 @@ int main() {
             initialize_document(doc);
             
             int type = parsing(request, doc);
-            printf("Parsed type: %d\n", type);
+            printf("Parsed type: %d\n", type);;
             int status = -1;
             pid_t pid; 
 
@@ -121,6 +122,7 @@ int main() {
                         }
                         status = cache_add(cache, doc, 0);
                         print_cache_state(cache); //debugging
+                        printf("cache_add status: %d\n", status);
                         if (status == 0){
                             char message[256];
                             snprintf(message, sizeof(message), "Document added successfully with key: %d", doc->key);
@@ -235,7 +237,39 @@ int main() {
                                 break;
                             }
                             case 4: {
-                                // bleh bleh
+                                printf("Received request for -l: %s\n", request);
+                                // Trim trailing newline and whitespace from request
+                                int len = strlen(request);
+                                while (len > 0 && (request[len - 1] == '\n' || request[len - 1] == '\r' || request[len - 1] == ' ' || request[len - 1] == '\t')) {
+                                    request[len - 1] = '\0';
+                                    len--;
+                                }
+                                int last_slash_idx = -1;
+                                char* extracted = NULL;
+                                for (int i = 0; i < len; i++) {
+                                    if (request[i] == '/') {
+                                        last_slash_idx = i;
+                                    }
+                                }
+                                if (last_slash_idx != -1 && request[last_slash_idx + 1] != '\0') {
+                                    extracted = request + last_slash_idx + 1;
+                                    printf("Extracted string: %s\n", extracted);
+                                    // Use 'extracted' as needed
+                                } else {
+                                    printf("No string found after last '/'\n");
+                                    extracted = NULL;
+                                }
+                                int count = -1;
+                                if (extracted != NULL) {
+                                    count = get_number_of_lines_with_keyword(doc->key, extracted);
+                                }
+                                if (count == -1) {
+                                    send_message(pipe_name, "Error reading file.");
+                                } else {
+                                    char message[256];
+                                    snprintf(message, sizeof(message), "Number of lines with keyword '%s': %d", extracted, count);
+                                    send_message(pipe_name, message);
+                                }
                             }
                             case 5: {
                                 // blah blah
