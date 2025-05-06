@@ -27,6 +27,7 @@ int get_number_of_lines_with_keyword(int key, char* keyword) {
         return -1;
     }
 
+    // REFACTOR A ISTO TUDOO.
     off_t file_size = lseek(fd, 0, SEEK_END);
     if (file_size == -1) {
         perror("lseek");

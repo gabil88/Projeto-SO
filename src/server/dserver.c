@@ -165,15 +165,15 @@ int main() {
                         break;
                     case 7: // Add to cache
                         printf("Adding from disk to cache: %s\n", req.request);
-                        int key = atoi(req.request + 4); // pegando na string "-ac/323" -> atoi("323") -> 323 
+                        int key = atoi(req.request + 4); // Example -> string "-ac/323" -> atoi("323") -> 323 
                         doc = consult_document(key);
                         printf("Document to add to cache: %s\n", doc->title);
-                        cache_add(cache, doc, 1); // adiciona saltando a verificação do storage
+                        status = cache_add(cache, doc, 1); // 1 means it skips the storage check
                         print_cache_state(cache);
                         if (status == 0) {
-                            printf("Document added to cache successfully.");
+                            printf("Document added to cache successfully.\n");
                         } else {
-                            printf("Unexpected Error adding document to cache.");
+                            printf("Unexpected Error adding document to cache.\n");
                         }
                         break;
                 }
