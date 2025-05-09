@@ -38,6 +38,8 @@ int parsing(char* request, Document* doc) {
         type = 6; // Wait for lost child
     } else if (strcmp(token, "-ac") == 0) {
         type = 7; // Exist in doc, add to cache
+    } else if (strcmp(token, "-uc") == 0) {
+        type = 8; // Update time in cache
     } else {
         return -1; // Invalid command
     }
@@ -67,7 +69,7 @@ int parsing(char* request, Document* doc) {
             strncpy(doc->path, token, sizeof(doc->path) - 1);
             doc->path[sizeof(doc->path) - 1] = '\0';
         }
-    } else if (type == 2 || type == 3 || type == 4) { // Consult or Delete - need key
+    } else if (type == 2 || type == 3) { // Consult or Delete - need key
         token = strtok(NULL, "/");
         if (!token) return -1;
         doc->key = atoi(token);

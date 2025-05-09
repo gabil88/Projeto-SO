@@ -42,6 +42,7 @@ int cache_add(Cache* cache, Document *doc, int skip_check) {
         printf("Cache item %d: %s\n", i, cache->items[i].doc ? cache->items[i].doc->title : "NULL");
         if (cache->items[i].doc != NULL && strcmp(cache->items[i].doc->title, doc->title) == 0) {
             printf("Document already exists in cache: %s\n", doc->title);
+            cache->items[i].last_access_time = time(NULL);
             fflush(stdout);
             return 2;   // Documento já existe no cache
         }
@@ -111,11 +112,16 @@ int cache_remove(Cache* cache, int key){
             cache->items[i].access_count = 0;
             cache->items[i].is_dirty = 0;
             cache->count--;
-            return 0;  // removido com sucesso
+            int res = remove_document(key);
+            if (res == 0) {
+                return 1; // removed from cache and disk
+            } else {
+                return -1; // failed to remove from disk
+            }
         }
     }
 
-    return remove_document(key); // Não existe em lado nenhum se sair -1
+    return remove_document(key); // Not in cache, try to remove from disk if 0 good if -1 bad
 }
 
 Document* cache_get(Cache* cache, int key){
@@ -130,6 +136,19 @@ Document* cache_get(Cache* cache, int key){
         }
     }
     return NULL;
+}
+
+int cache_update_time(Cache* cache,int key){
+    if (!cache) return -1;  
+
+    for (int i = 0; i < CACHE_SIZE; i++) {
+        if (cache->items[i].doc != NULL && cache->items[i].doc->key == key) {
+            cache->items[i].last_access_time = time(NULL);
+            cache->items[i].access_count++;
+            return 0;  // atualizado com sucesso
+        }
+    }
+    return -1;  // não encontrado
 }
 
 int cache_flush_all_dirty(Cache* cache) {

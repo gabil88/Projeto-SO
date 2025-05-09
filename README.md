@@ -5,10 +5,11 @@ authors têm no máximo 200 bytes cada, o campo path tem no máximo 64 bytes e o
 
 
 BUGS ATUAIS:
+-Queries não atualizam tempo direito
 
 TO-DO:
 - parte do codigo em memoria (double check , talvez melhor o LRU)
-- queries
+- queries (melhorar desempenho, atualizar tempos cache)
 - comentar
 - melhorar feedbacks dos prints
 - log system para erros
@@ -16,9 +17,6 @@ TO-DO:
 ?? garbage collector no disco 
 ?? encapsular os -w  e -x em uma request ou criar um novo fifo para estas mini-requests dos filhos
 
-PERGUNTAR AO VFF:
-
- 
 QUERIES:
 
 Documentos em que o documento apresenta a keyword e "nr_processes" é quantos devemos criar

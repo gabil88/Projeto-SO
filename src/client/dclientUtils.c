@@ -24,12 +24,13 @@ int verifyInput(int argc, char *argv[]) {
             return 0;
         }
     }
-    else if (strcmp(argv[1], "-l") == 0) {
+    else if (strcmp(argv[1], "-l") == 0 || strcmp(argv[1], "-s") == 0) {
         // List documents: needs 2 args (command, -l, "key", "keyword")
         if (argc == 4) {
             return 1;
         } else {
-            printf("Usage for list: %s -l\n", argv[0]);
+            printf("Usage for Querie1: %s -l <key> <keyword>, \n", argv[0]);
+            printf("Usage for Number of docs with a certain keyword: %s -s <keyword> <nr_processes>\n", argv[0]);
             return 0;
         }
     }

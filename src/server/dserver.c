@@ -16,6 +16,7 @@
 #include "../../include/server/querie_handler.h"
 
 #define FIFO_PATH "/tmp/server_fifo"
+#define INTERNAL_FIFO_PATH "/tmp/internal_fifo"
 #define MAX_ITEMS_IN_MEMORY 10
 
 
@@ -50,10 +51,56 @@ void print_cache_state(Cache* cache) {
     fflush(stdout);
 }
 
+
+// Special parsing 
+
+char** special_parsing(char* request) {
+    char** result = malloc(2 * sizeof(char*));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+    
+    char* token = strtok(request, "/");
+    
+    // Get subsequent tokens
+    result[0] = token ? strdup(strtok(NULL, "/")) : NULL;  // Second token
+    result[1] = token ? strdup(strtok(NULL, "/")) : NULL;  // Third token
+    
+    if (!result[0] || !result[1]) {
+        free(result[0]);
+        free(result[1]);
+        free(result);
+        return NULL;
+    }
+    
+    return result; 
+}
+
+void send_internal_request_to_server(const char* request) {
+    Request req = {0};
+    snprintf(req.request, sizeof(req.request), "%s", request);
+    snprintf(req.pipe, sizeof(req.pipe), "/tmp/server_response");  // Example default pipe
+
+    int req_fd = open(INTERNAL_FIFO_PATH, O_WRONLY);
+    if (req_fd != -1) {
+        ssize_t bytes_written = write(req_fd, &req, sizeof(Request));
+        if (bytes_written == -1) {
+            perror("Error writing to request FIFO");
+        } else if (bytes_written != sizeof(Request)) {
+            printf("Partial write to FIFO\n");
+        }
+        close(req_fd);
+    } else {
+        perror("Error opening FIFO for request");
+    }
+}
+
 int main() {
     
     // Remove the FIFO if it already exists
     unlink(FIFO_PATH);
+    unlink(INTERNAL_FIFO_PATH); // Remove internal FIFO if it exists
     
     // Create the FIFO 
     if (mkfifo(FIFO_PATH, 0666) == -1) {
@@ -68,6 +115,20 @@ int main() {
         return -1;
     }
 
+    if (mkfifo(INTERNAL_FIFO_PATH, 0666) == -1) {
+        perror("Error creating internal FIFO");
+        close(fifo_fd);
+        unlink(FIFO_PATH);
+        return -1;
+    }
+    
+    int internal_fifo_fd = open(INTERNAL_FIFO_PATH, O_RDONLY | O_NONBLOCK);
+    if (internal_fifo_fd == -1) {
+        perror("Error opening internal FIFO");
+        close(fifo_fd);
+        unlink(FIFO_PATH);
+    }
+    
     Cache* cache = cache_init(); // Inicializa a cache 
 
     GArray* deleted_keys = g_array_new(FALSE, FALSE, sizeof(int));
@@ -78,12 +139,15 @@ int main() {
     
 
     while (1) {
- 
         Request req;
-        ssize_t bytes_read = read(fifo_fd, &req, sizeof(Request));
+        ssize_t bytes_read = read(internal_fifo_fd, &req, sizeof(Request));
+        if (bytes_read != sizeof(Request)) {
+            // If nothing in internal FIFO, try normal FIFO (blocking)
+            bytes_read = read(fifo_fd, &req, sizeof(Request));
+        }
         if (bytes_read == sizeof(Request)) {
+            // Process the request (from either FIFO)
             printf("Received request: %s from pipe %s\n", req.request, req.pipe);
-
             char* request = req.request;
             char* pipe_name = req.pipe;
 
@@ -101,7 +165,7 @@ int main() {
             int status = -1;
             pid_t pid; 
 
-            if (type == 0 || type == 1 || type == 3 || type == 6 || type == 7) {
+            if (type == 0 || type == 1 || type == 3 || type == 6 || type == 7 || type == 8) {
                 // Handle type 1 and 3 in the parent process
                 switch(type){
                     case 0:
@@ -109,6 +173,7 @@ int main() {
                         cache_flush_all_dirty(cache);
                         free(cache);
                         close(fifo_fd);
+                        close(internal_fifo_fd);
                         unlink(FIFO_PATH);
                         send_message(pipe_name, "Server shutting down.");            
                         exit(0);
@@ -121,7 +186,9 @@ int main() {
                             doc->key = max_key + 1;
                         }
                         status = cache_add(cache, doc, 0);
-                        print_cache_state(cache); //debugging
+                        if (status == 0) {
+                            status = add_document(doc);
+                        }
                         printf("cache_add status: %d\n", status);
                         if (status == 0){
                             char message[256];
@@ -139,10 +206,12 @@ int main() {
                         status = cache_remove(cache, doc->key);
                         print_cache_state(cache);
                         if (status == 0) {
-                            send_message(pipe_name, "Document removed successfully.");
+                            send_message(pipe_name, "Document removed successfully from disk.");
                             g_array_append_val(deleted_keys, doc->key);
+                        } else if (status == 1) {
+                            send_message(pipe_name, "Document removed from disk and cache.");
                         } else {
-                            send_message(pipe_name, "Error removing document.");
+                            send_message(pipe_name, "Document not found in cache or disk.");
                         }
                         break;
                     case 6: // Wait for lost child
@@ -165,8 +234,8 @@ int main() {
                         break;
                     case 7: // Add to cache
                         printf("Adding from disk to cache: %s\n", req.request);
-                        int key = atoi(req.request + 4); // Example -> string "-ac/323" -> atoi("323") -> 323 
-                        doc = consult_document(key);
+                        int key_to_add = atoi(req.request + 4); // Example -> string "-ac/323" -> atoi("323") -> 323 
+                        doc = consult_document(key_to_add);
                         printf("Document to add to cache: %s\n", doc->title);
                         status = cache_add(cache, doc, 1); // 1 means it skips the storage check
                         print_cache_state(cache);
@@ -174,6 +243,16 @@ int main() {
                             printf("Document added to cache successfully.\n");
                         } else {
                             printf("Unexpected Error adding document to cache.\n");
+                        }
+                        break;
+                    case 8:
+                        printf("Updating time in cache: %s\n", req.request);
+                        int key_to_update = atoi(req.request + 4); // Example -> string "-uc/323" -> atoi("323") -> 323 
+                        int status = cache_update_time(cache, key_to_update);
+                        if (status == 0) {
+                            printf("Document updated in cache successfully.\n");
+                        } else {
+                            printf("Unexpected Error updating document time in cache.\n");
                         }
                         break;
                 }
@@ -203,7 +282,11 @@ int main() {
                                     char message[256];
                                     snprintf(message, sizeof(message), "Document found in cache with Key: %d and Title: %s", found_doc->key, found_doc->title);
                                     send_message(pipe_name, message);
-                                    free(found_doc);
+
+                                    char updateCache[256];
+                                    snprintf(updateCache, sizeof(updateCache), "-uc/%d", found_doc->key);
+                                    send_internal_request_to_server(updateCache);
+                                    // Do NOT free(found_doc) here! It's owned by the cache.
                                 } else {
                                     found_doc = consult_document(doc->key);
                                     if (found_doc != NULL) {
@@ -213,66 +296,93 @@ int main() {
 
                                         char addCache[256];
                                         snprintf(addCache, sizeof(addCache), "-ac/%d", found_doc->key);
-                                        Request addCache_req = {0};
+                                        send_internal_request_to_server(addCache);
 
-                                        snprintf(addCache_req.request, sizeof(addCache_req.request), "%s", addCache);   
-                                        snprintf(addCache_req.pipe, sizeof(addCache_req.pipe), "%s", pipe_name);
-
-                                        int addCache_fd = open(FIFO_PATH, O_WRONLY);
-                                        if (addCache_fd != -1) {
-                                            ssize_t bytes_written = write(addCache_fd, &addCache_req, sizeof(Request));
-                                            if (bytes_written == -1) {
-                                                perror("Error writing to addCache FIFO");
-                                            } else if (bytes_written != sizeof(Request)) {
-                                                printf("Partial write to FIFO\n");
-                                            }
-                                            close(addCache_fd);
-                                        } else {
-                                            perror("Error opening FIFO for addCache");
-                                        } 
+                                        free(found_doc); // Only free if it came from consult_document
                                     } else {
-                                        send_message(pipe_name, "Document not found.");
+                                        send_message(pipe_name, "Document not found.");    
                                     }
                                 }
                                 break;
                             }
                             case 4: {
                                 printf("Received request for -l: %s\n", request);
-                                // Trim trailing newline and whitespace from request
-                                int len = strlen(request);
-                                while (len > 0 && (request[len - 1] == '\n' || request[len - 1] == '\r' || request[len - 1] == ' ' || request[len - 1] == '\t')) {
-                                    request[len - 1] = '\0';
-                                    len--;
+                                
+                                char** extracted = special_parsing(request);
+                                if (!extracted) {
+                                    send_message(pipe_name, "Invalid request format.");
+                                    free(doc);
+                                    exit(1);
                                 }
-                                int last_slash_idx = -1;
-                                char* extracted = NULL;
-                                for (int i = 0; i < len; i++) {
-                                    if (request[i] == '/') {
-                                        last_slash_idx = i;
+                                
+                                printf("Extracted key: %s\n", extracted[0]);
+                                printf("Extracted keyword: %s\n", extracted[1]);
+                                
+                                int key = atoi(extracted[0]);
+                                Document* extracted_doc = cache_get(cache, key);
+                                
+                                if (extracted_doc != NULL) {
+                                    // Document found in cache
+                                    char updateCache[256];
+                                    snprintf(updateCache, sizeof(updateCache), "-uc/%d", key);
+                                    send_internal_request_to_server(updateCache);
+                                    
+                                    int count = get_number_of_lines_with_keyword(extracted_doc, extracted[1]);
+                                    if (count == -1) {
+                                        send_message(pipe_name, "Error reading file.");
+                                    } else {
+                                        char message[256];
+                                        snprintf(message, sizeof(message), "Number of lines with keyword '%s': %d", extracted[1], count);
+                                        send_message(pipe_name, message);
+                                    }
+                                    // DO NOT free(extracted_doc) here!
+                                } else {
+                                    // Check storage
+                                    extracted_doc = consult_document(key);
+                                    if (extracted_doc == NULL) {
+                                        send_message(pipe_name, "Document not found.");
+                                    } else {
+                                        char addCache[256];
+                                        snprintf(addCache, sizeof(addCache), "-ac/%d", key);
+                                        send_internal_request_to_server(addCache);
+                                        
+                                        int count = get_number_of_lines_with_keyword(extracted_doc, extracted[1]);
+                                        if (count == -1) {
+                                            send_message(pipe_name, "Error reading file.");
+                                        } else {
+                                            char message[256];
+                                            snprintf(message, sizeof(message), "Number of lines with keyword '%s': %d", extracted[1], count);
+                                            send_message(pipe_name, message);
+                                        }
+                                        free(extracted_doc);
                                     }
                                 }
-                                if (last_slash_idx != -1 && request[last_slash_idx + 1] != '\0') {
-                                    extracted = request + last_slash_idx + 1;
-                                    printf("Extracted string: %s\n", extracted);
-                                    // Use 'extracted' as needed
-                                } else {
-                                    printf("No string found after last '/'\n");
-                                    extracted = NULL;
-                                }
-                                int count = -1;
-                                if (extracted != NULL) {
-                                    count = get_number_of_lines_with_keyword(doc->key, extracted);
-                                }
+                                
+                                free(extracted[0]);
+                                free(extracted[1]);
+                                free(extracted);
+                                break;
+                            }
+                            case 5: {
+                                printf("Received request for -s: %s\n", request);
+                                
+                                char** extracted = special_parsing(request);
+                                printf("Extracted keyword: %s\n", extracted[0]);
+                                printf("Extracted number of processes: %s\n", extracted[1]);
+                                int nr_process = atoi(extracted[1]);
+
+                                int count = get_number_of_docs_with_keyword(extracted[0], nr_process, max_key);
                                 if (count == -1) {
                                     send_message(pipe_name, "Error reading file.");
                                 } else {
                                     char message[256];
-                                    snprintf(message, sizeof(message), "Number of lines with keyword '%s': %d", extracted, count);
+                                    snprintf(message, sizeof(message), "Number of documents with keyword '%s': %d", extracted[0], count);
                                     send_message(pipe_name, message);
                                 }
-                            }
-                            case 5: {
-                                // blah blah
+                                // Free the extracted strings
+                                free(extracted[0]);
+                                free(extracted[1]);
+                                free(extracted);
                             }
                         }
                         free(doc);

@@ -84,4 +84,7 @@ Document* cache_get(Cache* cache, int key);
  */
 int cache_flush_all_dirty(Cache* cache); 
 
+
+int cache_update_time(Cache* cache,int key);
+
 #endif 
