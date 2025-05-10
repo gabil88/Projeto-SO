@@ -20,6 +20,7 @@
 #define MAX_ITEMS_IN_MEMORY 10
 
 
+
 typedef struct {
     char request[256];
     char pipe[128];
@@ -45,7 +46,7 @@ void send_message(const char* pipe_name, const char* message) {
 // Function used for debugging purposes
 void print_cache_state(Cache* cache) {
     printf("Cache state:\n");
-    for (int i = 0; i < CACHE_SIZE; i++) {
+    for (int i = 0; i < cache->max_size; i++) {
         printf("Slot %d: %s\n", i, cache->items[i].doc ? cache->items[i].doc->title : "NULL");
     }
     fflush(stdout);
@@ -96,7 +97,57 @@ void send_internal_request_to_server(const char* request) {
     }
 }
 
+// Permitir pathToFile customizável
+char pathToFile[4096] = "DatasetTest/Gdataset";
+
 int main() {
+    // Perguntar pelo caminho dos ficheiros
+    char path_prompt[] = "Enter path to dataset folder (default: DatasetTest/Gdataset, press Enter or 1 for default): ";
+    char path_input[4096];
+    ssize_t n;
+    write(1, path_prompt, sizeof(path_prompt) - 1);
+    n = read(0, path_input, sizeof(path_input) - 1);
+    if (n > 0) {
+        // Remove newline
+        if (path_input[n-1] == '\n') path_input[n-1] = '\0';
+        else path_input[n] = '\0';
+        // Use default if empty or '1'
+        if (!(strlen(path_input) == 0 || (strlen(path_input) == 1 && path_input[0] == '1'))) {
+            strncpy(pathToFile, path_input, sizeof(pathToFile)-1);
+            pathToFile[sizeof(pathToFile)-1] = '\0';
+        }
+    }
+
+    int max_items_in_memory = 0;
+    char prompt[] = "Enter max items in memory: ";
+    char input[32];
+    while (1) {
+        write(1, prompt, sizeof(prompt) - 1);
+        n = read(0, input, sizeof(input) - 1);
+        if (n > 0) {
+            input[n] = '\0';
+            max_items_in_memory = atoi(input);
+            if (max_items_in_memory > 0) break;
+        }
+        char err[] = "Invalid value. Please enter a positive integer.\n";
+        write(1, err, sizeof(err) - 1);
+    }
+
+    // Prompt for cache policy
+    CachePolicy policy = CACHE_POLICY_LRU;
+    char policy_prompt[] = "Choose cache policy: 1 for LRU, 2 for Least Used: ";
+    while (1) {
+        write(1, policy_prompt, sizeof(policy_prompt) - 1);
+        n = read(0, input, sizeof(input) - 1);
+        if (n > 0) {
+            input[n] = '\0';
+            int val = atoi(input);
+            if (val == 1) { policy = CACHE_POLICY_LRU; break; }
+            if (val == 2) { policy = CACHE_POLICY_LEAST_USED; break; }
+        }
+        char err[] = "Invalid value. Please enter 1 or 2.\n";
+        write(1, err, sizeof(err) - 1);
+    }
     
     // Remove the FIFO if it already exists
     unlink(FIFO_PATH);
@@ -129,7 +180,7 @@ int main() {
         unlink(FIFO_PATH);
     }
     
-    Cache* cache = cache_init(); // Inicializa a cache 
+    Cache* cache = cache_init(max_items_in_memory, policy); // Pass policy to cache_init
 
     GArray* deleted_keys = g_array_new(FALSE, FALSE, sizeof(int));
 
