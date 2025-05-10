@@ -54,11 +54,12 @@ int cache_add(Cache* cache, Document *doc, int skip_check) {
             return 2;   // Documento já existe no cache
         }
     }
+    cache->misses++; 
 
     if(!skip_check){
         if(consult_document_by_title(doc->title) != NULL){
             printf("Document already exists in storage: %s\n", doc->title);
-            return 2; // Documento já existe no armazenamento
+            return 3; // Documento já existe no armazenamento
         }
     }
 
@@ -148,6 +149,7 @@ int cache_update_time(Cache* cache,int key){
         if (cache->items[i].doc != NULL && cache->items[i].doc->key == key) {
             cache->items[i].last_access_time = time(NULL);
             cache->items[i].access_count++;
+            cache->hits++;
             return 0;  // atualizado com sucesso
         }
     }
