@@ -57,7 +57,6 @@ Document* initialize_document(Document *doc);
 int add_document(Document *doc);
 int remove_document(int key);
 Document* consult_document(int key);
-int update_document(Document *doc);
 Document* consult_document_by_title(const char* title);
 
 /**

@@ -10,16 +10,20 @@ typedef struct {
     Document* doc;
     time_t last_access_time; 
     int access_count; 
-    int is_dirty;
 } CacheItem;
 
+typedef enum {
+    CACHE_POLICY_LRU = 1,
+    CACHE_POLICY_LEAST_USED = 2
+} CachePolicy;
 
 typedef struct {
-    CacheItem items[CACHE_SIZE];
+    CacheItem* items; // Now dynamically allocated
     int count;
-    // USADO PARA CALCULAR HIT RATE FUTURAMENTE PARA PERCEBER SE ISTO TA PICA
+    int max_size; // Store the max size (was CACHE_SIZE)
     int misses;
     int hits;
+    CachePolicy policy; // Add policy field
 } Cache;
 
 /*
@@ -29,7 +33,7 @@ typedef struct {
  * This function allocates memory for the cache and initializes its fields.
  * It should be called before using any other cache functions.
  */
-Cache* cache_init();
+Cache* cache_init(int max_size, CachePolicy policy);
 
 /*
  * @brief Cleans up the cache system.
@@ -87,4 +91,4 @@ int cache_flush_all_dirty(Cache* cache);
 
 int cache_update_time(Cache* cache,int key);
 
-#endif 
+#endif

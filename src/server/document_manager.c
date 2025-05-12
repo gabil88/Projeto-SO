@@ -165,61 +165,6 @@ Document* initialize_document(Document *doc){
     return doc;
 }
 
-int update_document(Document *doc) {
-    // Ensure the storage directory exists
-    if (mkdir("storage", 0755) == -1 && errno != EEXIST) {
-        perror("Error ensuring storage directory");
-        return -1;
-    }
-    int fd = open(pathToDoc, O_RDWR | O_CREAT, 0644);
-    if (fd < 0) {
-        perror("Error opening file");
-        return -1;
-    }
-
-    // Calculate the offset based on the key
-    printf("Updating document with key: %d\n", doc->key);
-    off_t offset = doc->key * sizeof(Document);
-    printf("Seeking to offset: %ld\n", (long)offset);
-    if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
-        perror("Error seeking to document position");
-        close(fd);
-        return -1;
-    }
-
-    
-    Document temp;
-    ssize_t read_result = read(fd, &temp, sizeof(Document));
-    if (read_result == sizeof(Document) && temp.key == doc->key && temp.flag_deleted == 0) {
-        // Update fields
-        temp.year = doc->year;
-        strncpy(temp.title, doc->title, sizeof(temp.title) - 1);
-        temp.title[sizeof(temp.title) - 1] = '\0';
-        strncpy(temp.author, doc->author, sizeof(temp.author) - 1);
-        temp.author[sizeof(temp.author) - 1] = '\0';
-        strncpy(temp.path, doc->path, sizeof(temp.path) - 1);
-        temp.path[sizeof(temp.path) - 1] = '\0';
-
-        // Move back to the start of this document to overwrite
-        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
-            perror("Error seeking back to document position");
-            close(fd);
-            return -1;
-        }
-        if (write(fd, &temp, sizeof(Document)) != sizeof(Document)) {
-            perror("Error writing to file");
-            close(fd);
-            return -1;
-        }
-        close(fd);
-        return 0;
-    }
-
-    close(fd);
-    // If not found, add the document
-    return add_document(doc);
-}
-
 Document* consult_document_by_title(const char* title) {
     int fd = open(pathToDoc, O_RDONLY);
     if (fd < 0) return NULL;

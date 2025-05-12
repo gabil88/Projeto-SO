@@ -25,6 +25,7 @@ int get_number_of_lines_with_keyword(Document* doc, char* keyword) {
 
     char full_path[4096];
     snprintf(full_path, sizeof(full_path), "%s/%s", pathToFile, doc->path);
+    printf("Full path: %s\n", full_path);
 
     // Check if the file exists
     struct stat buffer;
