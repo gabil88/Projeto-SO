@@ -26,6 +26,29 @@ typedef struct {
     char pipe[128];
 } Request;
 
+int start_logger() {
+    if (mkdir("logs", 0755) == -1 && errno != EEXIST) {
+        perror("Error creating logs directory");
+        return -1;
+    }
+    
+    int log_fd = open("logs/server_log.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (log_fd == -1) {
+        perror("Error opening log file");
+        return -1;
+    }
+    
+    // Duplicate the file descriptor to stderr
+    if (dup2(log_fd, STDERR_FILENO) == -1) {
+        perror("Error redirecting stderr to log file");
+        close(log_fd);
+        return -1;
+    }
+    
+    // Return the file descriptor without closing it
+    return log_fd;
+}
+
 // Function to send a message to the client
 void send_message(const char* pipe_name, const char* message) {
     int reply_fd = open(pipe_name, O_WRONLY);
@@ -368,6 +391,11 @@ int main() {
     Cache* cache = cache_init(max_items_in_memory, policy);
     GArray* deleted_keys = g_array_new(FALSE, FALSE, sizeof(int));
     int max_key = load_deleted_keys(deleted_keys);
+    int result = start_logger();
+    if (result == -1) {
+        fprintf(stderr, "Error starting logger.\n");
+        return -1;
+    }
     fsync(1);
     printf("=================================================\n");
     printf("Server started. Waiting for requests...\n");
