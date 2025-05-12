@@ -43,7 +43,6 @@ void cache_clean(Cache* cache) {
 
 int cache_add(Cache* cache, Document *doc, int skip_check) {
     if (!cache || !doc) return -1;  
-    
     // Verifica se o documento já existe no cache
     for (int i = 0; i < cache->max_size; i++) {
         printf("Cache item %d: %s\n", i, cache->items[i].doc ? cache->items[i].doc->title : "NULL");
@@ -63,10 +62,18 @@ int cache_add(Cache* cache, Document *doc, int skip_check) {
         }
     }
 
+    // Cria uma cópia do documento para guardar na cache
+    Document* doc_copy = malloc(sizeof(Document));
+    if (!doc_copy) {
+        perror("Error allocating memory for document copy");
+        return -1;
+    }
+    memcpy(doc_copy, doc, sizeof(Document));
+
     // Always try to find an empty slot first
     for (int i = 0; i < cache->max_size; i++) {
         if (cache->items[i].doc == NULL) {
-            cache->items[i].doc = doc;
+            cache->items[i].doc = doc_copy;
             cache->items[i].last_access_time = time(NULL);
             cache->items[i].access_count = 1;
             cache->count++;
@@ -100,7 +107,7 @@ int cache_add(Cache* cache, Document *doc, int skip_check) {
     }
     
     // Replace the LRU item
-    cache->items[victim_index].doc = doc;
+    cache->items[victim_index].doc = doc_copy;
     cache->items[victim_index].last_access_time = time(NULL);
     cache->items[victim_index].access_count = 1;
     return 0;  // adicionado com sucesso

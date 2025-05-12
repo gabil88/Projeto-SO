@@ -2,11 +2,11 @@
 ---
 
 ````markdown
-# 📚 Document Search Service (SO Project)
+# Document Search Service (SO Project)
 
 Este é um projeto realizado no âmbito da unidade curricular de **Sistemas Operativos** da Universidade do Minho. O objetivo é implementar um **serviço cliente-servidor** para indexação e pesquisa de documentos de texto armazenados localmente, utilizando comunicação via **named pipes (FIFOs)**.
 
-## ⚙️ Compilação
+## Compilação
 
 Compilar o projeto com:
 
@@ -14,7 +14,7 @@ Compilar o projeto com:
 make
 ````
 
-## 🚀 Execução
+## Execução
 
 ### Iniciar o servidor
 
@@ -25,11 +25,8 @@ make run-server
 Ou diretamente:
 
 ```bash
-./bin/dserver <document_folder> <cache_size>
+./bin/dserver
 ```
-
-* `document_folder`: pasta base onde se encontram os documentos.
-* `cache_size`: número máximo de entradas de meta-informação em cache.
 
 ### Utilizar o cliente
 
@@ -97,7 +94,7 @@ O cliente é executado com:
   ./bin/dclient -f
   ```
 
-## 🧼 Limpeza
+## Limpeza
 
 Para remover os binários e ficheiros temporários:
 
@@ -105,7 +102,7 @@ Para remover os binários e ficheiros temporários:
 make clean
 ```
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 .
@@ -118,14 +115,14 @@ make clean
 └── README.md       # Este ficheiro
 ```
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 * Linguagem C
 * Comunicação com named pipes (FIFOs)
 * Processos e concorrência
 * Manipulação de ficheiros com chamadas ao sistema (`open`, `read`, `write`, etc.)
 
-## 👨‍💻 Autores
+## Autores
 
 Projeto desenvolvido por:
 
