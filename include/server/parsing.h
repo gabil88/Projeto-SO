@@ -16,5 +16,12 @@
  */
 int parsing(char* request, Document *doc);
 
+/*
+* @brief Parses a special request to extract the keyword and number of processes.
+* 
+* @param request String with the request.
+* @return char** Array of strings containing the keyword and number of processes.
+*/
+char** special_parsing(char* request);
 
 #endif

@@ -12,165 +12,184 @@
 
 #define pathToFile "DatasetTest/Gdataset"
 
-
-/*
-* Atualmente esta tudo em disco, tenho de mudar para utilizar a cache tambem
-*/
-
-
-int get_number_of_lines_with_keyword(Document* doc, char* keyword) {
+int get_number_of_lines_with_keyword(Document* doc, char* keyword, int stop_on_first_match) {
     if (doc == NULL) {
         return -1; // Document not found
     }
 
-    char full_path[4096];
-    snprintf(full_path, sizeof(full_path), "%s/%s", pathToFile, doc->path);
-    printf("Full path: %s\n", full_path);
-
-    // Check if the file exists
-    struct stat buffer;
-    if (stat(full_path, &buffer) != 0) {
-        perror("File does not exist");
-        return -1;
-    }
-
-    // Create a pipe
-    int pipefd[2];
-    if (pipe(pipefd) == -1) {
-        perror("pipe");
-        return -1;
-    }
-
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("fork");
-        close(pipefd[0]);
-        close(pipefd[1]);
-        return -1;
-    }
-
-    if (pid == 0) {  
-        // Child process
-        close(pipefd[0]);  // Close read end
-        
-        // Redirect stdout to pipe
-        dup2(pipefd[1], STDOUT_FILENO);
-        close(pipefd[1]);
-        
-        // Execute grep and wc
-        char cmd[4096];
-        long unsigned int size = snprintf(cmd, sizeof(cmd), "grep \"%s\" \"%s\" | wc -l", keyword, full_path);
-        if (size >= sizeof(cmd)) {
-            fprintf(stderr, "Command too long\n");
-            exit(EXIT_FAILURE);
-        }
-        execlp("sh", "sh", "-c", cmd, NULL);
-        
-        perror("execlp");
-        exit(EXIT_FAILURE); // If execlp fails, exit child process
-
-    } else {  // Parent process
-        close(pipefd[1]);  // Close write end
-        
-        char result[32] = {0};
-        ssize_t bytes_read = read(pipefd[0], result, sizeof(result) - 1);
-        close(pipefd[0]);
-
-        // Wait for child
-        int status;
-        waitpid(pid, &status, 0);
-        
-        if (bytes_read <= 0) {
-            perror("read from pipe failed");
-            return -1;
-        }
-        
-        int count = atoi(result);
-        if (count > 0) {
-            printf("Keyword '%s' found in file: %s\n", keyword, full_path);
-        }
-        
-        return count;
-    }
-}
-
-int get_number_of_docs_with_keyword(char* keyword, int nr_process, int max_key) {
-    int work_load = max_key / nr_process;
-    int rest = max_key % nr_process;
-    pid_t pids[nr_process];
-    int pipes[nr_process][2]; // Array of pipes for communication
     int total_count = 0;
+    // Assuming doc->path is a char array like char path[SIZE];
+    // If doc->path is char*, sizeof(doc->path) would be sizeof(char*), which is incorrect.
+    // Given strncpy, a fixed-size array is implied by the original code.
+    char paths_copy[sizeof(doc->path)]; 
+    strncpy(paths_copy, doc->path, sizeof(paths_copy));
+    paths_copy[sizeof(paths_copy)-1] = '\0'; // Ensure null-termination
 
-    for (int i = 0; i < nr_process; i++) {
-        // Create pipe before fork
-        if (pipe(pipes[i]) == -1) {
+    char *token = strtok(paths_copy, ";");
+    while (token != NULL) {
+        char full_path[4096];
+        snprintf(full_path, sizeof(full_path), "%s/%s", pathToFile, token);
+        printf("Full path: %s\n", full_path);
+
+        struct stat buffer;
+        if (stat(full_path, &buffer) != 0) {
+            perror("File does not exist");
+            token = strtok(NULL, ";");
+            continue;
+        }
+
+        int pipefd[2];
+        if (pipe(pipefd) == -1) {
             perror("pipe");
-            return -1;
+            token = strtok(NULL, ";");
+            continue;
         }
 
         pid_t pid = fork();
         if (pid == -1) {
             perror("fork");
-            return -1;
+            close(pipefd[0]);
+            close(pipefd[1]);
+            token = strtok(NULL, ";");
+            continue;
         }
 
         if (pid == 0) {  
             // Child process
-            close(pipes[i][0]); // Close read end
-            
-            int start = i * work_load;
-            int end = start + work_load;
-            if (i == nr_process - 1) {
-                end += rest; // Add the remainder to the last process
-            }
+            close(pipefd[0]);  // Close read end
+            dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to pipe write end
+            close(pipefd[1]); // Close original pipe write end
 
-            int docs_with_keyword = 0;
-            for (int j = start; j < end; j++) {
-                Document* doc = consult_document(j);
-                int count = get_number_of_lines_with_keyword(doc, keyword);
-                if (count > 0) {
-                    printf("Document %d contains %d lines with keyword '%s'\n", j, count, keyword);
-                    docs_with_keyword++;
+            char cmd[4096];
+            // The command still counts all lines in the current file.
+            // The parent process will decide whether to stop based on this count and the flag.
+            long unsigned int size = snprintf(cmd, sizeof(cmd), "grep \"%s\" \"%s\" | wc -l", keyword, full_path);
+            if (size >= sizeof(cmd)) {
+                fprintf(stderr, "Command too long for buffer\n");
+                exit(EXIT_FAILURE);
+            }
+            execlp("sh", "sh", "-c", cmd, NULL);
+            perror("execlp failed"); // If execlp returns, it's an error
+            exit(EXIT_FAILURE);
+        } else {  // Parent process
+            close(pipefd[1]);  // Close write end
+            char result[32] = {0}; // Buffer for wc -l output
+            ssize_t bytes_read = read(pipefd[0], result, sizeof(result) - 1);
+            close(pipefd[0]); // Close read end
+
+            int status;
+            waitpid(pid, &status, 0); // Wait for child to complete
+
+            if (bytes_read > 0) {
+                int count_in_file = atoi(result); // Lines with keyword in current file
+                if (stop_on_first_match) {
+                    if (count_in_file > 0) {
+                        total_count = 1; // Signal that keyword was found
+                    }
+                } else {
+                    total_count += count_in_file; // Accumulate total lines
                 }
             }
-            
-            // Write the count to the pipe
-            ssize_t bytes_written = write(pipes[i][1], &docs_with_keyword, sizeof(int));
-            if (bytes_written != sizeof(int)) {
+            // If read failed or child had an issue, count_in_file might be 0 or result in 0 from atoi.
+            // total_count would not be positively affected or would be based on previous files if not stopping early.
+        }
+
+        // If stop_on_first_match is true and we've found the keyword (total_count is 1),
+        // then break out of the loop over files.
+        if (stop_on_first_match && total_count > 0) {
+            break; 
+        }
+
+        token = strtok(NULL, ";");
+    }
+    return total_count;
+}
+
+int* get_keys_of_docs_with_keyword(char* keyword, int nr_process, int max_key, int* out_count) {
+    int work_load = max_key / nr_process;
+    int rest = max_key % nr_process;
+    pid_t pids[nr_process];
+    int pipes[nr_process][2];
+    int* all_keys = malloc(sizeof(int) * (max_key + 1));
+    int total_count = 0;
+
+    for (int i = 0; i < nr_process; i++) {
+        if (pipe(pipes[i]) == -1) {
+            perror("pipe");
+            free(all_keys);
+            return NULL;
+        }
+        pid_t pid = fork();
+        if (pid == -1) {
+            perror("fork");
+            free(all_keys);
+            return NULL;
+        }
+        if (pid == 0) {  // Child
+            close(pipes[i][0]);
+            int start = i * work_load;
+            int end = start + work_load;
+            if (i == nr_process - 1) end += rest;
+            int* keys = malloc(sizeof(int) * (end - start));
+            int count = 0;
+            for (int j = start; j < end; j++) {
+                Document* doc = consult_document(j);
+                int c = get_number_of_lines_with_keyword(doc, keyword, 1);
+                if (c > 0) {
+                    keys[count++] = j;
+                }
+                if (doc) free(doc);
+            }
+            // Write count first, then the array
+            ssize_t w = write(pipes[i][1], &count, sizeof(int));
+            if (w != sizeof(int)) {
                 perror("write to pipe failed");
+                free(keys);
+                close(pipes[i][1]);
                 exit(1);
             }
+            if (count > 0) {
+                ssize_t w2 = write(pipes[i][1], keys, sizeof(int) * count);
+                if (w2 != (ssize_t)(sizeof(int) * count)) {
+                    perror("write to pipe failed");
+                    free(keys);
+                    close(pipes[i][1]);
+                    exit(1);
+                }
+            }
+            free(keys);
             close(pipes[i][1]);
             exit(0);
-        } else {  
-            // Parent process
-            close(pipes[i][1]); // Close write end
+        } else {
+            close(pipes[i][1]);
             pids[i] = pid;
         }
     }
-    
-    // Parent waits for all children to finish and collects results
+    // Parent collects all keys
     for (int i = 0; i < nr_process; i++) {
         int status;
         waitpid(pids[i], &status, 0);
-        
-        int child_count = 0;
-        ssize_t bytes_read = read(pipes[i][0], &child_count, sizeof(int));
-        if (bytes_read != sizeof(int)) {
+        int count = 0;
+        ssize_t r = read(pipes[i][0], &count, sizeof(int));
+        if (r != sizeof(int)) {
             perror("read from pipe failed");
-            child_count = 0; // Set to 0 in case of error
+            count = 0; // Set to 0 in case of error
+        } else if (count > 0) {
+            int* keys = malloc(sizeof(int) * count);
+            ssize_t r2 = read(pipes[i][0], keys, sizeof(int) * count);
+            if (r2 != (ssize_t)(sizeof(int) * count)) {
+                perror("read from pipe failed");
+                free(keys);
+                close(pipes[i][0]);
+                continue;
+            }
+            for (int k = 0; k < count; k++) {
+                all_keys[total_count++] = keys[k];
+            }
+            free(keys);
         }
         close(pipes[i][0]);
-        
-        total_count += child_count;
-        
-        if (WIFEXITED(status)) {
-            printf("Child process %d with pid %d finished with status %d\n",i, pids[i], WEXITSTATUS(status));
-        } else { 
-            printf("Child process %d with pid %d did not terminate normally\n",i, pids[i]);
-        }
     }
-    
-    printf("Total documents containing keyword '%s': %d\n", keyword, total_count);
-    return total_count;
+    *out_count = total_count;
+    return all_keys;
 }

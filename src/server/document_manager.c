@@ -9,6 +9,10 @@
 #include <glib.h>
 
 #include "../../include/server/document_manager.h"
+#include "../../include/server/parsing.h"
+#include "../../include/server/cache.h"
+#include "../../include/server/querie_handler.h"
+#include "../../include/server/server_utils.h"
 
 
 /* 
@@ -205,3 +209,75 @@ int load_deleted_keys(GArray *deleted_keys) {
 
     return max_key;
 }
+
+// Função utilitária correta para adicionar um novo path ao campo path do documento
+void add_filepath(Document* doc, const char* new_path) {
+    if (doc == NULL || new_path == NULL) return;
+    
+    // Check if path already exists
+    char *found = strstr(doc->path, new_path);
+    if (found != NULL) return;
+    
+    int path_len = 0;
+    while (doc->path[path_len] != '\0' && (size_t)path_len < sizeof(doc->path) - 1) {
+        path_len++;
+    }
+    
+    int new_path_len = 0;
+    while (new_path[new_path_len] != '\0') {
+        new_path_len++;
+    }
+    
+    // If there's already a path, add delimiter
+    if (path_len > 0 && (size_t)(path_len + 1) < sizeof(doc->path)) {
+        doc->path[path_len] = ';';
+        path_len++;
+        doc->path[path_len] = '\0';
+    }
+    
+    // Add new path if there's enough space
+    if ((size_t)(path_len + new_path_len) < sizeof(doc->path)) {
+        int i;
+        for (i = 0; i < new_path_len && (size_t)(path_len + i) < sizeof(doc->path) - 1; i++) {
+            doc->path[path_len + i] = new_path[i];
+        }
+        doc->path[path_len + i] = '\0';
+    }
+}
+
+/*
+int main() {
+    // Example usage
+    Document doc;
+    initialize_document(&doc);
+    strcpy(doc.title, "Example Document");
+    strcpy(doc.author, "John Doe");
+    strcpy(doc.path, "storage/example.txt");
+    doc.year = 2023;
+    doc.key = 1;
+    
+    add_document(&doc);
+    
+    Document* retrieved_doc = consult_document(1);
+    if (retrieved_doc) {
+        printf("Retrieved Document: %s by %s\n", retrieved_doc->title, retrieved_doc->author);
+        // Adiciona um novo path
+        add_filepath(retrieved_doc, "storage/new_path.txt");
+        // Adiciona outro path
+        add_filepath(retrieved_doc, "storage/another_path.txt");
+        printf("Updated Document Path: %s\n", retrieved_doc->path);
+        // Mostra cada path individualmente
+        char paths_copy[sizeof(retrieved_doc->path)];
+        strncpy(paths_copy, retrieved_doc->path, sizeof(paths_copy));
+        paths_copy[sizeof(paths_copy)-1] = '\0';
+        char *token = strtok(paths_copy, ";");
+        printf("Paths individually:\n");
+        while (token != NULL) {
+            printf("- %s\n", token);
+            token = strtok(NULL, ";");
+        }
+        free(retrieved_doc);
+    }
+    return 0;
+}
+*/

@@ -79,16 +79,15 @@ int cache_remove(Cache* cache, int key);
 Document* cache_get(Cache* cache, int key);
 
 /*
- * @brief Flushes the cache.
- *
- * This function flushes the cache, updating all dirty items.
- *
- * @param cache A pointer to the cache.
- * @return 0 on success, -1 on failure.
- */
-int cache_flush_all_dirty(Cache* cache); 
-
-
-int cache_update_time(Cache* cache,int key);
+* @brief Updates the last access time of a document in the cache.
+*
+* This function updates the last access time of a document in the cache
+* based on its key.
+*
+* @param cache A pointer to the cache.
+* @param key The key of the document to be updated.
+* @return 0 on success, -1 on failure.
+*/
+int cache_update(Cache* cache,int key);
 
 #endif

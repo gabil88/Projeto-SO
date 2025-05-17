@@ -81,3 +81,26 @@ int parsing(char* request, Document* doc) {
 
     return type;
 }
+
+char** special_parsing(char* request) {
+    char** result = malloc(2 * sizeof(char*));
+    if (!result) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
+    char* token = strtok(request, "/");
+
+    // Get subsequent tokens
+    result[0] = token ? strdup(strtok(NULL, "/")) : NULL;  // Second token
+    result[1] = token ? strdup(strtok(NULL, "/")) : NULL;  // Third token
+
+    if (!result[0] || !result[1]) {
+        free(result[0]);
+        free(result[1]);
+        free(result);
+        return NULL;
+    }
+
+    return result;
+}

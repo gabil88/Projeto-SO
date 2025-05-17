@@ -1,9 +1,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-
+#include <unistd.h>
+#include <fcntl.h>
+#include <time.h>
+#include <sys/types.h>
 #include "../../include/server/cache.h"
+
+
+// Helper to check if a path exists in a semicolon-separated list
+int path_exists(const char* all_paths, const char* new_path) {
+    if (!all_paths || !new_path) return 0;
+    char paths_copy[512];
+    strncpy(paths_copy, all_paths, sizeof(paths_copy) - 1);
+    paths_copy[sizeof(paths_copy) - 1] = '\0';
+    char* token = strtok(paths_copy, ";");
+    while (token) {
+        if (strcmp(token, new_path) == 0) return 1;
+        token = strtok(NULL, ";");
+    }
+    return 0;
+}
 
 Cache* cache_init(int max_size, CachePolicy policy){
     Cache* cache = malloc(sizeof(Cache));
@@ -47,18 +64,48 @@ int cache_add(Cache* cache, Document *doc, int skip_check) {
     for (int i = 0; i < cache->max_size; i++) {
         printf("Cache item %d: %s\n", i, cache->items[i].doc ? cache->items[i].doc->title : "NULL");
         if (cache->items[i].doc != NULL && strcmp(cache->items[i].doc->title, doc->title) == 0) {
-            printf("Document already exists in cache: %s\n", doc->title);
-            cache->items[i].last_access_time = time(NULL);
-            fflush(stdout);
-            return 2;   // Documento já existe no cache
+            if (path_exists(cache->items[i].doc->path, doc->path)) {
+                printf("Document already exists in cache\n");
+                cache->items[i].last_access_time = time(NULL);
+                cache->items[i].access_count++;
+                return 2; // Exists in cache
+            } else {
+                add_filepath(cache->items[i].doc, doc->path); // Documento já existe no cache, path diferente
+                cache->items[i].last_access_time = time(NULL);
+                cache->items[i].access_count++;
+                printf("Document already exists in cache, added new path: %s\n", cache->items[i].doc->path);
+                return 4; // Exists in cache, but path is different
+            }
         }
     }
-    cache->misses++; 
+    cache->misses++;
 
     if(!skip_check){
-        if(consult_document_by_title(doc->title) != NULL){
+        Document* disk_doc = consult_document_by_title(doc->title);
+        if(disk_doc != NULL){
             printf("Document already exists in storage: %s\n", doc->title);
-            return 3; // Documento já existe no armazenamento
+            if (path_exists(disk_doc->path, doc->path)) {
+                free(disk_doc);
+                return 3; // Exists in disk
+            } else {
+                add_filepath(disk_doc, doc->path);
+                int fd = open(pathToDoc, O_RDWR);
+                if (fd >= 0) {
+                    off_t offset = disk_doc->key * sizeof(Document);
+                    if (lseek(fd, offset, SEEK_SET) != (off_t)-1) {
+                        int escrita = write(fd, disk_doc, sizeof(Document));
+                        if (escrita < 0) {
+                            perror("Error writing to file");
+                        } else if (escrita != sizeof(Document)) {
+                            fprintf(stderr, "Partial write occurred\n");
+                        }
+                    }
+                    close(fd);
+                }
+                printf("Added new path to existing document on disk: %s\n", disk_doc->path);
+                free(disk_doc);
+                return 4; // Exists in disk, but path is different
+            }
         }
     }
 
@@ -149,7 +196,7 @@ Document* cache_get(Cache* cache, int key){
     return NULL;
 }
 
-int cache_update_time(Cache* cache,int key){
+int cache_update(Cache* cache,int key){
     if (!cache) return -1;  
 
     for (int i = 0; i < cache->max_size; i++) {
@@ -163,14 +210,4 @@ int cache_update_time(Cache* cache,int key){
     return -1;  // não encontrado
 }
 
-int cache_flush_all_dirty(Cache* cache) {
-    if (!cache) return -1;  
-
-    for (int i = 0; i < cache->max_size; i++) {
-        if (cache->items[i].doc != NULL) {
-            // No need to update_document
-        }
-    }
-    return 0;  // sucesso
-}
 
