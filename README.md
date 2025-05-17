@@ -5,6 +5,7 @@
 # Document Search Service (SO Project)
 
 Este é um projeto realizado no âmbito da unidade curricular de **Sistemas Operativos** da Universidade do Minho. O objetivo é implementar um **serviço cliente-servidor** para indexação e pesquisa de documentos de texto armazenados localmente, utilizando comunicação via **named pipes (FIFOs)**.
+````
 
 ## Pré-requisitos
 
