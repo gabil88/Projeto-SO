@@ -36,12 +36,19 @@ int main(int argc, char *argv[]) {
     
     // Prepare request buffer
     char request_buffer[1024] = {0};
-    
-    // Concatenate command line arguments to request
-    for (int i = 1; i < argc; i++) {
-        strncat(request_buffer, argv[i], sizeof(request_buffer) - strlen(request_buffer) - 1);
-        if (i < argc - 1) {
-            strncat(request_buffer, "/", sizeof(request_buffer) - strlen(request_buffer) - 1);
+
+    // If command is -s and nr_processes is missing, add default value 1 and include -s in the request
+    if (argc >= 3 && strcmp(argv[1], "-s") == 0 && argc == 3) {
+        strncat(request_buffer, "-s/", sizeof(request_buffer) - strlen(request_buffer) - 1);
+        strncat(request_buffer, argv[2], sizeof(request_buffer) - strlen(request_buffer) - 1);
+        strncat(request_buffer, "/1", sizeof(request_buffer) - strlen(request_buffer) - 1);
+    } else {
+        // Concatenate command line arguments to request as before
+        for (int i = 1; i < argc; i++) {
+            strncat(request_buffer, argv[i], sizeof(request_buffer) - strlen(request_buffer) - 1);
+            if (i < argc - 1) {
+                strncat(request_buffer, "/", sizeof(request_buffer) - strlen(request_buffer) - 1);
+            }
         }
     }
 

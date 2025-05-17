@@ -19,13 +19,7 @@ make
 ### Iniciar o servidor
 
 ```bash
-make run-server
-```
-
-Ou diretamente:
-
-```bash
-./bin/dserver
+./bin/dserver GDatasetTest/Gdataset 10 
 ```
 
 ### Utilizar o cliente
