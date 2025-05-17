@@ -6,6 +6,15 @@
 
 Este é um projeto realizado no âmbito da unidade curricular de **Sistemas Operativos** da Universidade do Minho. O objetivo é implementar um **serviço cliente-servidor** para indexação e pesquisa de documentos de texto armazenados localmente, utilizando comunicação via **named pipes (FIFOs)**.
 
+## Pré-requisitos
+
+Instalação da libglib2.0-dev.
+No caso do Ubuntu Linux, tal pode ser instalado com:
+
+```bash
+sudo apt-get install libglib2.0-dev
+````
+
 ## Compilação
 
 Compilar o projeto com:
@@ -122,5 +131,5 @@ Projeto desenvolvido por:
 
 * Gabriel Pinto Dantas             – A107291
 * Simão Azevedo Oliveira           – A107322
-* José Lourenço Ferreira Fernandes – AXXXXXXXX
+* José Lourenço Ferreira Fernandes – A106937
 
